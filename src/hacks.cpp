@@ -6,7 +6,7 @@
 #include <string>
 #include<time.h>
 
-hackClass::hackClass()
+HackClass::HackClass()
 {
 	processName = L"gta_sa.exe";
 	procId = GetProcessId(processName);
@@ -20,19 +20,19 @@ hackClass::hackClass()
 	armorAddr = FindDynamicAddr(hProc, dynamicPtrPlayerBaseAddr, ofOffsets.armorOffsets);
 }
 
-hackClass::~hackClass()
+HackClass::~HackClass()
 {
-
+	
 }
 
-void hackClass::SavePlayerPosition()
+void HackClass::SavePlayerPosition()
 {
 
-	int currentCarPointer;
+	int currentVehiclePointer;
 	uintptr_t currentCarPosAddr;
 
-	ReadProcessMemory(hProc, (LPCVOID)0xBA18FC, &currentCarPointer, sizeof(currentCarPointer), 0);
-	if (currentCarPointer)
+	currentVehiclePointer = CheckIfInVehicle();
+	if (currentVehiclePointer)
 	{
 		currentCarPosAddr = FindDynamicAddr(hProc, dynamicPtrCurrentCarBaseAddr, ofOffsets.positionOffsets);
 		ReadProcessMemory(hProc, (LPCVOID)currentCarPosAddr, &playerPos, sizeof(playerPos), 0);
@@ -45,11 +45,12 @@ void hackClass::SavePlayerPosition()
 
 }
 
-void hackClass::LoadPlayerPosition()
+
+void HackClass::LoadPlayerSavedPosition()
 {
 
 	int currentCarPointer;
-	ReadProcessMemory(hProc, (LPCVOID)0xBA18FC, &currentCarPointer, sizeof(currentCarPointer), 0);
+	currentCarPointer = CheckIfInVehicle();
 	uintptr_t currentCarPosAddr;
 	if (swSwitches.posSaved)
 	{
@@ -67,8 +68,27 @@ void hackClass::LoadPlayerPosition()
 }
 
 
+void HackClass::LoadPlayerPosition(vec3 pos)
+{
 
-void hackClass::TeleportToTargetEntity()
+	int currentCarPointer;
+	currentCarPointer = CheckIfInVehicle();
+	uintptr_t currentCarPosAddr;
+	if (currentCarPointer)
+	{
+		currentCarPosAddr = FindDynamicAddr(hProc, dynamicPtrCurrentCarBaseAddr, ofOffsets.positionOffsets);
+		WriteProcessMemory(hProc, (LPVOID)currentCarPosAddr, &pos, sizeof(pos), 0);
+	}
+	else
+	{
+		WriteProcessMemory(hProc, (LPVOID)playerPosAddr, &pos, sizeof(pos), 0);
+	}
+
+	
+}
+
+
+void HackClass::TeleportToTargetEntity()
 {
 	uintptr_t targetEntityAddr = FindDynamicAddr(hProc, dynamicPtrPlayerBaseAddr, ofOffsets.targetEntityOffsets);
 	int targetEntity;
@@ -87,30 +107,47 @@ void hackClass::TeleportToTargetEntity()
 	}
 }
 
+void HackClass::TeleportToBulletLocation()
+{
+	ReadProcessMemory(hProc, (LPCVOID)ofOffsets.sniperBulletLocationOffset, &sniperBulletLocation, sizeof(sniperBulletLocation), 0);
+	if (sniperBulletLocation.x)
+	{
+		sniperBulletLocation.z += 2;
+		LoadPlayerPosition(sniperBulletLocation);
+	}
+}
 
-void hackClass::ChangeFloatValue(float value)
+uintptr_t HackClass::CheckIfInVehicle()
+{
+	uintptr_t currentVehiclePointer;
+	ReadProcessMemory(hProc, (LPCVOID)0xBA18FC, &currentVehiclePointer, sizeof(currentVehiclePointer), 0);
+	return currentVehiclePointer;
+}
+
+
+void HackClass::ChangeFloatValue(float value, uintptr_t addr)
 {
 
-	WriteProcessMemory(hProc, (LPVOID)healthAddr, &value, sizeof(value), 0);
+	WriteProcessMemory(hProc, (LPVOID)addr, &value, sizeof(value), 0);
 }
 
 
 
-void hackClass::FreezeAmmo()
+void HackClass::FreezeAmmo()
 {
 	NopEx(hProc, (LPVOID)(moduleBaseAddr + 0x3428AF), 1);
 	NopEx(hProc, (LPVOID)(moduleBaseAddr + 0x3428E6), 3);
 }
 
 
-void hackClass::UnfreezeAmmo()
+void HackClass::UnfreezeAmmo()
 {
 	PatchEx(hProc, (LPVOID)(moduleBaseAddr + 0x3428AF), (LPVOID)("\x48"), 1);
 	PatchEx(hProc, (LPVOID)(moduleBaseAddr + 0x3428E6), (LPVOID)("\xFF\x4E\x0C"), 3);
 }
 
 
-void hackClass::KillWithSigth()
+void HackClass::KillWithSigth()
 {
 	uintptr_t targetEntityAddr = FindDynamicAddr(hProc, dynamicPtrPlayerBaseAddr, ofOffsets.targetEntityOffsets);
 	uintptr_t targetEntityHealthAddr;
@@ -125,8 +162,89 @@ void hackClass::KillWithSigth()
 }
 
 
+void HackClass::MakeCurrentVehicleGodMode(bool isEnabled) 
+{
+	unsigned char carFlags;
+	uintptr_t currentVehiclePointer;
+	uintptr_t currentCarFlagsAddr;
 
-void hackClass::MenuDisplay()
+	currentVehiclePointer = CheckIfInVehicle();
+	if (currentVehiclePointer)
+	{
+		currentCarFlagsAddr = currentVehiclePointer + 0x42;
+		isEnabled ? carFlags = 188 : carFlags = 0;
+		WriteProcessMemory(hProc, (LPVOID)currentCarFlagsAddr, &carFlags, sizeof(carFlags), 0);
+	}
+}
+
+void HackClass::FixCurrentVehicle()
+{
+	float newVehicleHealth = 1000;
+	int carTiresOkValue = 0;
+	unsigned short bikeTiresOkValue = 0;
+	uintptr_t currentVehiclePointer;
+	uintptr_t currentVehicleHealthAddr;
+	uintptr_t currentCarTiresAddr;
+	uintptr_t currentBikeTiresAddr;
+	unsigned char bikeTireStatus;
+	
+	currentVehiclePointer = CheckIfInVehicle();
+	if (currentVehiclePointer)
+	{
+		currentVehicleHealthAddr = currentVehiclePointer + ofOffsets.carHealthOffset;
+		currentBikeTiresAddr = currentVehiclePointer + ofOffsets.bikeFrontTireOffset;
+		ReadProcessMemory(hProc, (LPCVOID)currentBikeTiresAddr, &bikeTireStatus, sizeof(bikeTireStatus), 0);
+		if (bikeTireStatus >= 0 && bikeTireStatus <= 3)
+		{
+			
+			WriteProcessMemory(hProc, (LPVOID)currentBikeTiresAddr, &bikeTiresOkValue, sizeof(bikeTiresOkValue), 0);
+		}
+		else
+		{
+			currentCarTiresAddr = currentVehiclePointer + ofOffsets.carLeftFrontTireOffset;
+			WriteProcessMemory(hProc, (LPVOID)currentCarTiresAddr, &carTiresOkValue, sizeof(carTiresOkValue), 0);
+		}
+		
+		WriteProcessMemory(hProc, (LPVOID)currentVehicleHealthAddr, &newVehicleHealth, sizeof(newVehicleHealth), 0);
+		
+
+	}
+}
+
+
+void HackClass::VehicleSpeedBoost()
+{
+	uintptr_t currentVehicleAddr = CheckIfInVehicle();
+	vec3 speedVector;
+	if (currentVehicleAddr)
+	{
+		ReadProcessMemory(hProc, (LPCVOID)(currentVehicleAddr + ofOffsets.vehicleSpeedVectorOffset), &speedVector, sizeof(speedVector), 0);
+		speedVector.x = speedVector.x + (speedVector.x * 0.012);
+		speedVector.y = speedVector.y + (speedVector.y * 0.012);
+		speedVector.z = speedVector.z + (speedVector.z * 0.012);
+		WriteProcessMemory(hProc, (LPVOID)(currentVehicleAddr + ofOffsets.vehicleSpeedVectorOffset), &speedVector, sizeof(speedVector), 0);
+	}
+	
+}
+
+
+void HackClass::VehicleJump()
+{
+	uintptr_t currentVehicleAddr = CheckIfInVehicle();
+	vec3 speedVector;
+	if (currentVehicleAddr)
+	{
+		ReadProcessMemory(hProc, (LPCVOID)(currentVehicleAddr + ofOffsets.vehicleSpeedVectorOffset), &speedVector, sizeof(speedVector), 0);
+		speedVector.z = speedVector.z + 0.023;
+		WriteProcessMemory(hProc, (LPVOID)(currentVehicleAddr + ofOffsets.vehicleSpeedVectorOffset), &speedVector, sizeof(speedVector), 0);
+	}
+
+}
+
+
+
+
+void HackClass::MenuDisplay()
 {
 	system("CLS");
 	std::string activated = "[X]";
@@ -160,9 +278,19 @@ void hackClass::MenuDisplay()
 		std::cout << "[NUMPAD_6] Teleport To Targeted Entity : ";
 		if (swSwitches.TeleportToTargetEntity) std::cout << "[Teleported Sucessfully!]" << std::endl;
 		else std::cout << dezactivated << std::endl;
+		
 		std::cout << "[NUMPAD_7] Kill With Sight             : ";
 		if (swSwitches.killWithSight) std::cout << activated << std::endl;
 		else std::cout << dezactivated << std::endl;
+		
+		std::cout << "[NUMPAD_8] Vehicle Godmode             : ";
+		if (swSwitches.vehicleGodMode) std::cout << activated << std::endl;
+		else std::cout << dezactivated << std::endl;
+
+		std::cout << "[NUMPAD_9] Vehicle Repair              : ";
+		if (swSwitches.vehicleFix) std::cout << activated << std::endl;
+		else std::cout << dezactivated << std::endl;
+
 	}
 	else
 	{
@@ -174,10 +302,11 @@ void hackClass::MenuDisplay()
 	
 	swSwitches.loadPos = false;
 	swSwitches.TeleportToTargetEntity = false;
+	swSwitches.vehicleFix = false;
 }
 
 
-void hackClass::MainHackLoop() {
+void HackClass::MainHackLoop() {
 	bool running = true;
 	while (running)
 	{
@@ -201,6 +330,7 @@ void hackClass::MainHackLoop() {
 		if (GetAsyncKeyState(VK_NUMPAD3) & 0x01)
 		{
 			swSwitches.freezeAmmo = !swSwitches.freezeAmmo;
+			swSwitches.freezeAmmo ? FreezeAmmo() : UnfreezeAmmo();
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD4))
@@ -212,7 +342,12 @@ void hackClass::MainHackLoop() {
 		if (GetAsyncKeyState(VK_NUMPAD5))
 		{
 
-			LoadPlayerPosition();
+			LoadPlayerSavedPosition();
+		}
+
+		if (GetAsyncKeyState(VK_NUMPAD6))
+		{
+			TeleportToTargetEntity();
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD7))
@@ -220,40 +355,56 @@ void hackClass::MainHackLoop() {
 			swSwitches.killWithSight = !swSwitches.killWithSight;
 		}
 
-
-		if (GetAsyncKeyState(VK_NUMPAD6))
+		if (GetAsyncKeyState(VK_NUMPAD8))
 		{
-			TeleportToTargetEntity();
+			swSwitches.vehicleGodMode = !swSwitches.vehicleGodMode;
+			MakeCurrentVehicleGodMode(swSwitches.vehicleGodMode);
+		}
+
+		if (GetAsyncKeyState(VK_NUMPAD9))
+		{
+			swSwitches.vehicleFix = !swSwitches.vehicleFix;
+			FixCurrentVehicle();
+		}
+
+		if (GetAsyncKeyState('X'))
+		{
+			VehicleSpeedBoost();
+		}
+
+		if (GetAsyncKeyState('B'))
+		{
+			VehicleJump();
+		}
+
+		if (GetAsyncKeyState('O'))
+		{
+			TeleportToBulletLocation();
 		}
 
 
+	
 		if (swSwitches.freezeHealth)
 		{
-			ChangeFloatValue(131.0f);
+			ChangeFloatValue(131.0f,healthAddr);
 		}
 
 		if (swSwitches.freezeArmor)
 		{
-			ChangeFloatValue(131.0f);
+			ChangeFloatValue(131.0f,armorAddr);
 		}
 
-		if (swSwitches.freezeAmmo)
-		{
-			FreezeAmmo();
-		}
-		else
-		{
-			UnfreezeAmmo();
-		}
 
 		if (swSwitches.killWithSight)
 		{
 			KillWithSigth();
 		}
 
+		
 
-		MenuDisplay();
-		Sleep(100);
+
+		//MenuDisplay();
+		Sleep(10);
 
 	}
 }

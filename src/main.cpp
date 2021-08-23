@@ -4,7 +4,7 @@
 int main()
 {
 
-	hackClass mainHack;
+	HackClass mainHack;
 	mainHack.MainHackLoop();
 	return 0;
 }
