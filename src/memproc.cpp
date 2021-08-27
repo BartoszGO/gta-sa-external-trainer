@@ -67,6 +67,20 @@ uintptr_t FindDynamicAddr(HANDLE hProc, uintptr_t ptr, std::vector<unsigned int>
 }
 
 
+uintptr_t FindDynamicAddr2(HANDLE hProc, uintptr_t ptr, std::vector<unsigned int>offsets)
+{
+	uintptr_t dynamicAddr = ptr;
+	for (unsigned int i = 0; i < offsets.size(); i++)
+	{
+		dynamicAddr += offsets[i];
+		if(i-1>=offsets.size()) ReadProcessMemory(hProc, (LPVOID)dynamicAddr, &dynamicAddr, sizeof(dynamicAddr), 0);
+	}
+	return dynamicAddr;
+
+}
+
+
+
 void PatchEx(HANDLE hProc, LPVOID Addr, LPCVOID buffer, SIZE_T size)
 {
 	DWORD dwOldProtect;
