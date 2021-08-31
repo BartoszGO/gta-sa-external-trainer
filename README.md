@@ -1,5 +1,5 @@
 # gta-sa-external-trainer
-An external Grand Theft Auto:San Andreas trainer made in c++, using Windows.h library
+An external Grand Theft Auto:San Andreas trainer made with c++, using Windows.h library
 ## What can i do with this trainer
 There are plenty of functions that allow you to
 
