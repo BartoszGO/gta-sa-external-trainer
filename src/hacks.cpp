@@ -17,12 +17,12 @@ HackClass::HackClass()
 	procId = GetProcessId(processName);
 	hProc = OpenProcess(PROCESS_ALL_ACCESS, 0, procId);
 	moduleBaseAddr = GetModuleBaseAddress(procId, processName);
-	playerBasePtr = moduleBaseAddr + ofOffsets.playerOffset;
-	currentCarPtr = moduleBaseAddr + ofOffsets.currentCarOffset;
-	playerPosAddr = FindDynamicAddr(hProc, playerBasePtr, ofOffsets.positionOffsets);
-	healthAddr = FindDynamicAddr(hProc, playerBasePtr, ofOffsets.healthOffsets);
-	armorAddr = FindDynamicAddr(hProc, playerBasePtr, ofOffsets.armorOffsets);
-	ReadProcessMemory(hProc, LPCVOID(playerBasePtr), &playerAddr, sizeof(playerAddr), 0);
+	playerPtrAddr = moduleBaseAddr + ofOffsets.playerOffset;
+	currentCarPtrAddr = moduleBaseAddr + ofOffsets.currentCarOffset;
+	playerPosPtr = FindDynamicAddr(hProc, playerPtrAddr, ofOffsets.positionOffsets);
+	healthPtr = FindDynamicAddr(hProc, playerPtrAddr, ofOffsets.healthOffsets);
+	armorPtr = FindDynamicAddr(hProc, playerPtrAddr, ofOffsets.armorOffsets);
+	ReadProcessMemory(hProc, LPCVOID(playerPtrAddr), &playerPtr, sizeof(playerPtr), 0);
 }
 
 HackClass::~HackClass()
@@ -33,17 +33,17 @@ HackClass::~HackClass()
 void HackClass::SavePlayerPosition()
 {
 
-	uintptr_t currentVehiclePointer;
-	uintptr_t currentCarPosAddr;
+	uintptr_t currentVehiclePtr;
+	uintptr_t currentCarPosPtr;
 
-	currentVehiclePointer = CheckIfInVehicle();
-	if (currentVehiclePointer)
+	currentVehiclePtr = CheckIfInVehicle();
+	if (currentVehiclePtr)
 	{
-		playerSavedPos = GetEntityPosition(currentVehiclePointer);
+		playerSavedPos = GetEntityPosition(currentVehiclePtr);
 	}
 	else
 	{
-		ReadProcessMemory(hProc, (LPCVOID)playerPosAddr, &playerSavedPos, sizeof(playerSavedPos), 0);
+		ReadProcessMemory(hProc, (LPCVOID)playerPosPtr, &playerSavedPos, sizeof(playerSavedPos), 0);
 	}
 	swSwitches.posSaved = true;
 
@@ -53,19 +53,20 @@ void HackClass::SavePlayerPosition()
 void HackClass::LoadPlayerSavedPosition()
 {
 
-	int currentCarPointer;
+	uintptr_t currentCarPointer;
+	uintptr_t currentCarPosPtr;
 	currentCarPointer = CheckIfInVehicle();
-	uintptr_t currentCarPosAddr;
+	
 	if (swSwitches.posSaved)
 	{
 		if (currentCarPointer)
 		{
-			currentCarPosAddr = FindDynamicAddr(hProc, currentCarPtr, ofOffsets.positionOffsets);
-			WriteProcessMemory(hProc, (LPVOID)currentCarPosAddr, &playerSavedPos, sizeof(playerSavedPos), 0);
+			currentCarPosPtr = FindDynamicAddr2(hProc, currentCarPointer, ofOffsets.positionOffsets);
+			WriteProcessMemory(hProc, (LPVOID)currentCarPosPtr, &playerSavedPos, sizeof(playerSavedPos), 0);
 		}
 		else
 		{
-			WriteProcessMemory(hProc, (LPVOID)playerPosAddr, &playerSavedPos, sizeof(playerSavedPos), 0);
+			WriteProcessMemory(hProc, (LPVOID)playerPosPtr, &playerSavedPos, sizeof(playerSavedPos), 0);
 		}
 	}
 	swSwitches.loadPos = true;
@@ -75,17 +76,17 @@ void HackClass::LoadPlayerSavedPosition()
 void HackClass::LoadPlayerPosition(vec3 pos)
 {
 
-	int currentCarPointer;
+	uintptr_t currentCarPointer;
 	currentCarPointer = CheckIfInVehicle();
 	uintptr_t currentCarPosAddr;
 	if (currentCarPointer)
 	{
-		currentCarPosAddr = FindDynamicAddr(hProc, currentCarPtr, ofOffsets.positionOffsets);
+		currentCarPosAddr = FindDynamicAddr(hProc, currentCarPtrAddr, ofOffsets.positionOffsets);
 		WriteProcessMemory(hProc, (LPVOID)currentCarPosAddr, &pos, sizeof(pos), 0);
 	}
 	else
 	{
-		WriteProcessMemory(hProc, (LPVOID)playerPosAddr, &pos, sizeof(pos), 0);
+		WriteProcessMemory(hProc, (LPVOID)playerPosPtr, &pos, sizeof(pos), 0);
 	}
 
 	
@@ -93,26 +94,26 @@ void HackClass::LoadPlayerPosition(vec3 pos)
 
 void HackClass::MovePlayerPosition(vec3 movement)
 {
-	uintptr_t currentCar = CheckIfInVehicle();
-	uintptr_t currentCarPosAddr;
+	uintptr_t currentCarPtr = CheckIfInVehicle();
+	uintptr_t currentCarPosPtr;
 	vec3 currentPosition;
 	vec3 currentCarPos;
 
-	if (currentCar)
+	if (currentCarPtr)
 	{
-		currentCarPosAddr = FindDynamicAddr(hProc, currentCarPtr, ofOffsets.positionOffsets);
-		ReadProcessMemory(hProc, (LPCVOID)currentCarPosAddr, &currentCarPos, sizeof(currentCarPos), 0);
+		currentCarPosPtr = FindDynamicAddr(hProc, currentCarPtrAddr, ofOffsets.positionOffsets);
+		ReadProcessMemory(hProc, (LPCVOID)currentCarPosPtr, &currentCarPos, sizeof(currentCarPos), 0);
 		currentCarPos.x += movement.x;
 		currentCarPos.y += movement.y;
 		currentCarPos.z += movement.z;
-		WriteProcessMemory(hProc, (LPVOID)currentCarPosAddr, &currentCarPos, sizeof(currentCarPos), 0);
+		WriteProcessMemory(hProc, (LPVOID)currentCarPosPtr, &currentCarPos, sizeof(currentCarPos), 0);
 		return;
 	}
-	ReadProcessMemory(hProc, (LPCVOID)playerPosAddr, &currentPosition, sizeof(currentPosition), 0);
+	ReadProcessMemory(hProc, (LPCVOID)playerPosPtr, &currentPosition, sizeof(currentPosition), 0);
 	currentPosition.x += movement.x;
 	currentPosition.y += movement.y;
 	currentPosition.z += movement.z;
-	WriteProcessMemory(hProc, (LPVOID)playerPosAddr, &currentPosition, sizeof(currentPosition), 0);
+	WriteProcessMemory(hProc, (LPVOID)playerPosPtr, &currentPosition, sizeof(currentPosition), 0);
 }
 
 
@@ -137,28 +138,98 @@ vec3 HackClass::RotatePoint(float cx, float cy, float angle, vec3 p)
 	return p;
 }
 
-void HackClass::SetFlags(uintptr_t entity, bool setFlag, bool isCar)
-{
-	BYTE noGravityFlag = 16;
-	uint8_t noSpeedFlag = 32;
-	uint8_t freezeFlag = 2;
-	uint8_t gravityFlag = 18;
-	uint8_t speedFlag = 2;
-	uint8_t noFreezeFlag = 0;
 
-	
+void HackClass::SetFlagsForGodMode(uintptr_t entity, bool setFlag)
+{
+	uint8_t tmpFlag;
 	if (setFlag)
 	{
-		if (!isCar)WriteProcessMemory(hProc, (LPVOID)(entity + 0x40), &noGravityFlag, sizeof(noGravityFlag), 0);
-		if (!isCar)WriteProcessMemory(hProc, (LPVOID)(entity + 0x41), &noSpeedFlag, sizeof(noSpeedFlag), 0);
-		if(!isCar) WriteProcessMemory(hProc, (LPVOID)(entity + 0x42), &freezeFlag, sizeof(freezeFlag), 0);
+		ReadProcessMemory(hProc, (LPCVOID)(entity + 0x42), &tmpFlag, sizeof(tmpFlag), 0);
+		tmpFlag += flags.godModeFlag;
+		WriteProcessMemory(hProc, (LPVOID)(entity + 0x42), &tmpFlag, sizeof(tmpFlag), 0);
+		
+		ReadProcessMemory(hProc, (LPVOID)(entity + 0x470), &tmpFlag, sizeof(tmpFlag), 0);
+		tmpFlag += flags.headImmunity;
+		WriteProcessMemory(hProc, (LPVOID)(entity + 0x470), &tmpFlag, sizeof(tmpFlag), 0);
+		swSwitches.godModeFlagsSet = true;
 
 	}
 	else
 	{
-		if (!isCar)WriteProcessMemory(hProc, (LPVOID)(entity + 0x40), &gravityFlag, sizeof(gravityFlag), 0);
-		if(!isCar)WriteProcessMemory(hProc, (LPVOID)(entity + 0x41), &speedFlag, sizeof(speedFlag), 0);
-		if (!isCar)WriteProcessMemory(hProc, (LPVOID)(entity + 0x42), &noFreezeFlag, sizeof(noFreezeFlag), 0);
+		ReadProcessMemory(hProc, (LPCVOID)(entity + 0x42), &tmpFlag, sizeof(tmpFlag), 0);
+		tmpFlag -= flags.godModeFlag;
+		WriteProcessMemory(hProc, (LPVOID)(entity + 0x42), &tmpFlag, sizeof(tmpFlag), 0);
+
+		ReadProcessMemory(hProc, (LPVOID)(entity + 0x470), &tmpFlag, sizeof(tmpFlag), 0);
+		tmpFlag -= flags.headImmunity;
+		WriteProcessMemory(hProc, (LPVOID)(entity + 0x470), &tmpFlag, sizeof(tmpFlag), 0);
+		swSwitches.godModeFlagsSet = true;
+		swSwitches.godModeFlagsSet = false;
+	}
+
+}
+
+void HackClass::SetFlagsForAirbreak(uintptr_t entity, bool setFlag, bool isCar)
+{
+	
+	uint8_t tmpFlag;
+	if (setFlag)
+	{
+		if (isCar)
+		{
+			ReadProcessMemory(hProc, (LPCVOID)(entity + 0x40), &tmpFlag, sizeof(tmpFlag), 0);
+			tmpFlag += flags.noGravityFlagCar;
+			WriteProcessMemory(hProc, (LPVOID)(entity + 0x40), &tmpFlag, sizeof(tmpFlag), 0);
+		}
+		else
+		{
+			ReadProcessMemory(hProc, (LPCVOID)(entity + 0x40), &tmpFlag, sizeof(tmpFlag), 0);
+			tmpFlag -= flags.noGravityFlag;
+			WriteProcessMemory(hProc, (LPVOID)(entity + 0x40), &tmpFlag, sizeof(tmpFlag), 0);
+
+			WriteProcessMemory(hProc, (LPVOID)(entity + 0x46c), &flags.playerFlag, sizeof(flags.playerFlag), 0);
+
+			
+		}
+
+		ReadProcessMemory(hProc, (LPCVOID)(entity + 0x41), &tmpFlag, sizeof(tmpFlag), 0);
+		tmpFlag += flags.noSpeedFlag;
+		WriteProcessMemory(hProc, (LPVOID)(entity + 0x41), &tmpFlag, sizeof(tmpFlag), 0);
+
+		ReadProcessMemory(hProc, (LPCVOID)(entity + 0x42), &tmpFlag, sizeof(tmpFlag), 0);
+		tmpFlag += flags.freezeFlag;
+		WriteProcessMemory(hProc, (LPVOID)(entity + 0x42), &tmpFlag, sizeof(tmpFlag), 0);
+
+
+		
+	}
+	else
+	{
+		if (isCar)
+		{
+			ReadProcessMemory(hProc, (LPCVOID)(entity + 0x40), &tmpFlag, sizeof(tmpFlag), 0);
+			tmpFlag -= flags.noGravityFlagCar;
+			WriteProcessMemory(hProc, (LPVOID)(entity + 0x40), &tmpFlag, sizeof(tmpFlag), 0);
+		}
+		else
+		{
+			ReadProcessMemory(hProc, (LPCVOID)(entity + 0x40), &tmpFlag, sizeof(tmpFlag), 0);
+			tmpFlag += flags.noGravityFlag;
+			WriteProcessMemory(hProc, (LPVOID)(entity + 0x40), &tmpFlag, sizeof(tmpFlag), 0);
+
+			WriteProcessMemory(hProc, (LPVOID)(entity + 0x46c), &flags.noPlayerFlag, sizeof(flags.noPlayerFlag), 0);
+
+
+		}
+
+		ReadProcessMemory(hProc, (LPCVOID)(entity + 0x41), &tmpFlag, sizeof(tmpFlag), 0);
+		tmpFlag -= flags.noSpeedFlag;
+		WriteProcessMemory(hProc, (LPVOID)(entity + 0x41), &tmpFlag, sizeof(tmpFlag), 0);
+
+		ReadProcessMemory(hProc, (LPCVOID)(entity + 0x42), &tmpFlag, sizeof(tmpFlag), 0);
+		tmpFlag -= flags.freezeFlag;
+		WriteProcessMemory(hProc, (LPVOID)(entity + 0x42), &tmpFlag, sizeof(tmpFlag), 0);
+	
 	}
 
 }
@@ -166,18 +237,13 @@ void HackClass::SetFlags(uintptr_t entity, bool setFlag, bool isCar)
 
 vec3 HackClass::GetEntityPosition(uintptr_t entity)
 {
-	uintptr_t positionAddr;
+	uintptr_t positionPtr;
 	uintptr_t offset;
 	vec3 position = { 0.0f,0.0f,0.0f };
-	positionAddr = FindDynamicAddr2(hProc, entity, ofOffsets.positionOffsets);
-	ReadProcessMemory(hProc, (LPCVOID)positionAddr, &position, sizeof(position), 0);
+	positionPtr = FindDynamicAddr2(hProc, entity, ofOffsets.positionOffsets);
+	ReadProcessMemory(hProc, (LPCVOID)positionPtr, &position, sizeof(position), 0);
 	return position;
 
-}
-
-void HackClass::SetPlayerPosition(vec3 pos)
-{
-	WriteProcessMemory(hProc, LPVOID(playerPosAddr), &pos, sizeof(pos), 0);
 }
 
 void HackClass::AirBreak()
@@ -190,33 +256,34 @@ void HackClass::AirBreak()
 	vec3 playerPosition;
 
 	vec3 movement = { 0.0f,0.0f,0.0f };
+	static float boost = 1;
 
 	BYTE noGravityFlag = 16;
 	uint8_t noSpeedFlag = 32;
 	uint8_t freezeFlag = 2;
-	uintptr_t currentCar;
+	uintptr_t currentCarPtr;
 
 
-	currentCar = CheckIfInVehicle();
-	ReadProcessMemory(hProc, (LPCVOID)(playerAddr + 0x40), &flags, sizeof(flags), 0);
+	currentCarPtr = CheckIfInVehicle();
+	ReadProcessMemory(hProc, (LPCVOID)(playerPtr + 0x40), &flags, sizeof(flags), 0);
 	
 	if (flags != 16)
 	{
-		SetFlags(playerAddr, 1,0);
+		SetFlagsForAirbreak(playerPtr, 1,0);
 	}
 
-	if (currentCar)
+	if (currentCarPtr)
 	{
-		playerPosition = GetEntityPosition(currentCar);
-		ReadProcessMemory(hProc, (LPCVOID)(currentCar + 0x40), &carFlags, sizeof(carFlags), 0);
+		playerPosition = GetEntityPosition(currentCarPtr);
+		ReadProcessMemory(hProc, (LPCVOID)(currentCarPtr + 0x40), &carFlags, sizeof(carFlags), 0);
 		if (carFlags != 16)
 		{
-			SetFlags(currentCar, 1, 1);
+			SetFlagsForAirbreak(currentCarPtr, 1, 1);
 		}
 	}
 
 	ReadProcessMemory(hProc, (LPCVOID)(ofOffsets.cameraAim), &cameraAim, sizeof(cameraAim), 0);
-	playerPosition = GetEntityPosition(playerAddr);
+	playerPosition = GetEntityPosition(playerPtr);
 
 	cameraPos.x = playerPosition.x - cameraAim.x;
 	cameraPos.y = playerPosition.y - cameraAim.y;
@@ -277,6 +344,38 @@ void HackClass::AirBreak()
 		movement.z -= 0.5f;
 	}
 
+
+	if (GetAsyncKeyState(VK_ADD) & 0x01)
+	{
+		if (boost < 0.5f )
+		{
+			boost += 0.05f;
+		}
+		else
+		{
+			boost += 0.5f;
+		}
+		
+
+	}
+
+	if (GetAsyncKeyState(VK_SUBTRACT) & 0x01)
+	{
+		
+		if(boost>0.5f) boost -= 0.5f;
+
+		if (boost <=  0.5f && boost >= 0.05f)
+		{
+			boost -= 0.05f;
+		}
+
+
+	}
+	
+	movement.x *= boost;
+	movement.y *= boost;
+	movement.z *= boost;
+	
 	MovePlayerPosition(movement);
 
 }
@@ -287,20 +386,21 @@ void HackClass::AirBreakOff()
 
 	uint8_t carFlags;
 	uint8_t flags;
-	uintptr_t currentCar;
+	uintptr_t currentCarPtr;
 
-	ReadProcessMemory(hProc, (LPCVOID)(currentCarPtr), &currentCar, sizeof(currentCar), 0);
-	ReadProcessMemory(hProc, (LPCVOID)(playerAddr + 0x40), &flags, sizeof(flags), 0);
-	ReadProcessMemory(hProc, (LPCVOID)(currentCar + 0x40), &carFlags, sizeof(carFlags), 0);
+	ReadProcessMemory(hProc, (LPCVOID)(currentCarPtrAddr), &currentCarPtr, sizeof(currentCarPtr), 0);
+	ReadProcessMemory(hProc, (LPCVOID)(playerPtr + 0x40), &flags, sizeof(flags), 0);
+	ReadProcessMemory(hProc, (LPCVOID)(currentCarPtr + 0x40), &carFlags, sizeof(carFlags), 0);
 
-	if (flags == 16)
+	
+	if (currentCarPtr)
 	{
-		SetFlags(playerAddr, 0,0);
+		SetFlagsForAirbreak(currentCarPtr, 0,1);
 	}
-
-	if (currentCar && carFlags == 16)
+	
+	if(flags == 16)
 	{
-		SetFlags(currentCar, 0,1);
+		SetFlagsForAirbreak(playerPtr, 0, 0);
 	}
 
 }
@@ -308,24 +408,24 @@ void HackClass::AirBreakOff()
 
 void HackClass::TeleportToTargetEntity()
 {
-	uintptr_t targetEntityAddr = FindDynamicAddr(hProc, playerBasePtr, ofOffsets.targetEntityOffsets);
-	int targetEntity;
-	ReadProcessMemory(hProc, (LPCVOID)targetEntityAddr, &targetEntity, sizeof(targetEntity), 0);
-	uintptr_t targetEntityPositionAddr;
+	uintptr_t targetEntityPtr = FindDynamicAddr(hProc, playerPtrAddr, ofOffsets.targetEntityOffsets);
+	uintptr_t targetEntity;
+	ReadProcessMemory(hProc, (LPCVOID)targetEntityPtr, &targetEntity, sizeof(targetEntity), 0);
+	uintptr_t targetEntityPositionPtr;
 	vec3 targetEntityPos;
 
 	if (targetEntity)
 	{
-		targetEntityPositionAddr = FindDynamicAddr(hProc, targetEntityAddr, ofOffsets.positionOffsets);
-		ReadProcessMemory(hProc, (LPCVOID)targetEntityPositionAddr, &targetEntityPos, sizeof(targetEntityPos), 0);
+		targetEntityPositionPtr = FindDynamicAddr(hProc, targetEntityPtr, ofOffsets.positionOffsets);
+		ReadProcessMemory(hProc, (LPCVOID)targetEntityPositionPtr, &targetEntityPos, sizeof(targetEntityPos), 0);
 		targetEntityPos.x += 0.5;
-		WriteProcessMemory(hProc, (LPVOID)playerPosAddr, &targetEntityPos, sizeof(targetEntityPos), 0);
+		WriteProcessMemory(hProc, (LPVOID)playerPosPtr, &targetEntityPos, sizeof(targetEntityPos), 0);
 		swSwitches.teleportToTargetEntity = true;
 
 	}
 }
 
-void HackClass::TeleportToBulletLocation()
+void HackClass::TeleportToSniperBulletLocation()
 {
 
 	vec3 currentPos;
@@ -348,7 +448,7 @@ void HackClass::TeleportToBulletLocation()
 		ReadProcessMemory(hProc, (LPCVOID)ofOffsets.sniperBulletLocationOffset, &sniperBulletPos, sizeof(sniperBulletPos), 0);
 		if (sniperBulletPos.x)
 		{
-			ReadProcessMemory(hProc, (LPCVOID)playerPosAddr, &currentPos, sizeof(currentPos), 0);
+			ReadProcessMemory(hProc, (LPCVOID)playerPosPtr, &currentPos, sizeof(currentPos), 0);
 
 			//fix sniper bullet location with trigonometry
 			vec.x = sniperBulletPos.x - currentPos.x;
@@ -373,6 +473,10 @@ void HackClass::TeleportToBulletLocation()
 	}
 }
 
+
+
+
+
 uintptr_t HackClass::CheckIfInVehicle()
 {
 	uintptr_t currentVehiclePointer;
@@ -387,6 +491,15 @@ void HackClass::ChangeFloatValue(float value, uintptr_t addr)
 	WriteProcessMemory(hProc, (LPVOID)addr, &value, sizeof(value), 0);
 }
 
+void HackClass::FreezeHealth()
+{
+	if(!swSwitches.godModeFlagsSet)
+	{
+		SetFlagsForGodMode(playerPtr, 1);
+	}
+	
+	ChangeFloatValue(131.0f, healthPtr);
+}
 
 
 void HackClass::FreezeAmmo()
@@ -404,16 +517,16 @@ void HackClass::UnfreezeAmmo()
 }
 
 
-void HackClass::KillWithSigth()
+void HackClass::KillWithSight()
 {
-	uintptr_t targetEntityAddr = FindDynamicAddr(hProc, playerBasePtr, ofOffsets.targetEntityOffsets);
-	uintptr_t targetEntityHealthAddr;
+	uintptr_t targetEntityPtr = FindDynamicAddr(hProc, playerPtrAddr, ofOffsets.targetEntityOffsets);
+	uintptr_t targetEntityHealthPtr;
 	int entityHealth = 0;
 
-	if (targetEntityAddr)
+	if (targetEntityPtr)
 	{
-		targetEntityHealthAddr = FindDynamicAddr(hProc, targetEntityAddr, ofOffsets.healthOffsets);
-		WriteProcessMemory(hProc, (LPVOID)targetEntityHealthAddr, &entityHealth, sizeof(entityHealth), 0);
+		targetEntityHealthPtr = FindDynamicAddr(hProc, targetEntityPtr, ofOffsets.healthOffsets);
+		WriteProcessMemory(hProc, (LPVOID)targetEntityHealthPtr, &entityHealth, sizeof(entityHealth), 0);
 	}
 
 }
@@ -422,15 +535,15 @@ void HackClass::KillWithSigth()
 void HackClass::MakeCurrentVehicleGodMode(bool isEnabled) 
 {
 	unsigned char carFlags;
-	uintptr_t currentVehiclePointer;
-	uintptr_t currentCarFlagsAddr;
+	uintptr_t currentVehiclePtr;
+	uintptr_t currentVehicleFlagsPtr;
 
-	currentVehiclePointer = CheckIfInVehicle();
-	if (currentVehiclePointer)
+	currentVehiclePtr = CheckIfInVehicle();
+	if (currentVehiclePtr)
 	{
-		currentCarFlagsAddr = currentVehiclePointer + 0x42;
+		currentVehicleFlagsPtr = currentVehiclePtr + 0x42;
 		isEnabled ? carFlags = 188 : carFlags = 0;
-		WriteProcessMemory(hProc, (LPVOID)currentCarFlagsAddr, &carFlags, sizeof(carFlags), 0);
+		WriteProcessMemory(hProc, (LPVOID)currentVehicleFlagsPtr, &carFlags, sizeof(carFlags), 0);
 	}
 }
 
@@ -439,30 +552,30 @@ void HackClass::FixCurrentVehicle()
 	float newVehicleHealth = 1000;
 	int carTiresOkValue = 0;
 	unsigned short bikeTiresOkValue = 0;
-	uintptr_t currentVehiclePointer;
-	uintptr_t currentVehicleHealthAddr;
-	uintptr_t currentCarTiresAddr;
-	uintptr_t currentBikeTiresAddr;
+	uintptr_t currentVehiclePtr;
+	uintptr_t currentVehicleHealthPtr;
+	uintptr_t currentCarTiresPtr;
+	uintptr_t currentBikeTiresPtr;
 	unsigned char bikeTireStatus;
 	
-	currentVehiclePointer = CheckIfInVehicle();
-	if (currentVehiclePointer)
+	currentVehiclePtr = CheckIfInVehicle();
+	if (currentVehiclePtr)
 	{
-		currentVehicleHealthAddr = currentVehiclePointer + ofOffsets.carHealthOffset;
-		currentBikeTiresAddr = currentVehiclePointer + ofOffsets.bikeFrontTireOffset;
-		ReadProcessMemory(hProc, (LPCVOID)currentBikeTiresAddr, &bikeTireStatus, sizeof(bikeTireStatus), 0);
+		currentVehicleHealthPtr = currentVehiclePtr + ofOffsets.carHealthOffset;
+		currentBikeTiresPtr = currentVehiclePtr + ofOffsets.bikeFrontTireOffset;
+		ReadProcessMemory(hProc, (LPCVOID)currentBikeTiresPtr, &bikeTireStatus, sizeof(bikeTireStatus), 0);
 		if (bikeTireStatus >= 0 && bikeTireStatus <= 3)
 		{
 			
-			WriteProcessMemory(hProc, (LPVOID)currentBikeTiresAddr, &bikeTiresOkValue, sizeof(bikeTiresOkValue), 0);
+			WriteProcessMemory(hProc, (LPVOID)currentBikeTiresPtr, &bikeTiresOkValue, sizeof(bikeTiresOkValue), 0);
 		}
 		else
 		{
-			currentCarTiresAddr = currentVehiclePointer + ofOffsets.carLeftFrontTireOffset;
-			WriteProcessMemory(hProc, (LPVOID)currentCarTiresAddr, &carTiresOkValue, sizeof(carTiresOkValue), 0);
+			currentCarTiresPtr = currentVehiclePtr + ofOffsets.carLeftFrontTireOffset;
+			WriteProcessMemory(hProc, (LPVOID)currentCarTiresPtr, &carTiresOkValue, sizeof(carTiresOkValue), 0);
 		}
 		
-		WriteProcessMemory(hProc, (LPVOID)currentVehicleHealthAddr, &newVehicleHealth, sizeof(newVehicleHealth), 0);
+		WriteProcessMemory(hProc, (LPVOID)currentVehicleHealthPtr, &newVehicleHealth, sizeof(newVehicleHealth), 0);
 		
 
 	}
@@ -471,15 +584,15 @@ void HackClass::FixCurrentVehicle()
 
 void HackClass::VehicleSpeedBoost()
 {
-	uintptr_t currentVehicleAddr = CheckIfInVehicle();
+	uintptr_t currentVehiclePtr = CheckIfInVehicle();
 	vec3 speedVector;
-	if (currentVehicleAddr)
+	if (currentVehiclePtr)
 	{
-		ReadProcessMemory(hProc, (LPCVOID)(currentVehicleAddr + ofOffsets.vehicleSpeedVectorOffset), &speedVector, sizeof(speedVector), 0);
+		ReadProcessMemory(hProc, (LPCVOID)(currentVehiclePtr + ofOffsets.vehicleSpeedVectorOffset), &speedVector, sizeof(speedVector), 0);
 		speedVector.x = speedVector.x + (speedVector.x * 0.012);
 		speedVector.y = speedVector.y + (speedVector.y * 0.012);
 		speedVector.z = speedVector.z + (speedVector.z * 0.012);
-		WriteProcessMemory(hProc, (LPVOID)(currentVehicleAddr + ofOffsets.vehicleSpeedVectorOffset), &speedVector, sizeof(speedVector), 0);
+		WriteProcessMemory(hProc, (LPVOID)(currentVehiclePtr + ofOffsets.vehicleSpeedVectorOffset), &speedVector, sizeof(speedVector), 0);
 	}
 	
 }
@@ -487,13 +600,13 @@ void HackClass::VehicleSpeedBoost()
 
 void HackClass::VehicleJump()
 {
-	uintptr_t currentVehicleAddr = CheckIfInVehicle();
+	uintptr_t currentVehiclePtr = CheckIfInVehicle();
 	vec3 speedVector;
-	if (currentVehicleAddr)
+	if (currentVehiclePtr)
 	{
-		ReadProcessMemory(hProc, (LPCVOID)(currentVehicleAddr + ofOffsets.vehicleSpeedVectorOffset), &speedVector, sizeof(speedVector), 0);
+		ReadProcessMemory(hProc, (LPCVOID)(currentVehiclePtr + ofOffsets.vehicleSpeedVectorOffset), &speedVector, sizeof(speedVector), 0);
 		speedVector.z = speedVector.z + 0.023;
-		WriteProcessMemory(hProc, (LPVOID)(currentVehicleAddr + ofOffsets.vehicleSpeedVectorOffset), &speedVector, sizeof(speedVector), 0);
+		WriteProcessMemory(hProc, (LPVOID)(currentVehiclePtr + ofOffsets.vehicleSpeedVectorOffset), &speedVector, sizeof(speedVector), 0);
 	}
 
 }
@@ -520,7 +633,7 @@ void HackClass::MenuDisplay()
 		addToBuffer(buffer, "[NUMPAD_7] Kill With Sight             : ", swSwitches.killWithSight,0);
 		addToBuffer(buffer, "[NUMPAD_8] Vehicle Godmode             : ", swSwitches.vehicleGodMode,0);
 		addToBuffer(buffer, "[NUMPAD_9] Vehicle Repair              : ", swSwitches.vehicleFix,0);
-		addToBuffer(buffer, "[  'O'   ] Teleport To Sniper Bullet   : ", swSwitches.teleportToBullet,0);
+		addToBuffer(buffer, "[  'O'   ] Teleport To Sniper Bullet   : ", swSwitches.teleportToSniperBullet,0);
 		addToBuffer(buffer, "[  'X'   ] Vehicle Boost               : ", (bool)GetAsyncKeyState('X'),0);
 		addToBuffer(buffer, "[  'B'   ] Vehicle Jump                : ", (bool)GetAsyncKeyState('B'),0);
 		addToBuffer(buffer, "[  'L'   ] Air Break                   : ", swSwitches.airBreak, 0);
@@ -563,6 +676,10 @@ void HackClass::MainHackLoop() {
 		if (GetAsyncKeyState(VK_NUMPAD1) & 0x01)
 		{
 			swSwitches.freezeHealth = !swSwitches.freezeHealth;
+			if (!swSwitches.freezeHealth)
+			{
+				SetFlagsForGodMode(playerPtr, 0);
+			}
 		}
 
 
@@ -640,30 +757,35 @@ void HackClass::MainHackLoop() {
 		
 		if (GetAsyncKeyState('O') & 0x01)
 		{
-			swSwitches.teleportToBullet = !swSwitches.teleportToBullet;
+			swSwitches.teleportToSniperBullet = !swSwitches.teleportToSniperBullet;
 		}
+
+
+
 
 		if (swSwitches.freezeHealth)
 		{
-			ChangeFloatValue(131.0f,healthAddr);
+			FreezeHealth();
 		}
 
 		if (swSwitches.freezeArmor)
 		{
-			ChangeFloatValue(131.0f,armorAddr);
+			ChangeFloatValue(131.0f,armorPtr);
 		}
 
 
 		if (swSwitches.killWithSight)
 		{
-			KillWithSigth();
+			KillWithSight();
 		}
 
-		if (swSwitches.teleportToBullet)
+		if (swSwitches.teleportToSniperBullet)
 		{
-			TeleportToBulletLocation();
+			TeleportToSniperBulletLocation();
 		}
 
+
+	
 		if (swSwitches.airBreak)
 		{
 			AirBreak();

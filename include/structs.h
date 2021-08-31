@@ -15,7 +15,9 @@ struct offsets
 	unsigned int vehicleSpeedVectorOffset = 0x44;
 	unsigned int sniperBulletLocationOffset = 0xC88750;
 	unsigned int sniperBulletExistsOffset = 0xC8874C;
+	unsigned int bulletExistsOffset = 0xC7C760;
 	unsigned int cameraAim = 0xB6F32C;
+	unsigned int bulletVec3 = 0xC7C754;
 	std::vector<unsigned int> healthOffsets = { 0x540 };
 	std::vector<unsigned int> weaponStructOffsets = { 0x5A0 };
 	std::vector<unsigned int> targetEntityOffsets = { 0x79C };
@@ -30,6 +32,8 @@ struct vec3
 {
 	float x, y, z;
 };
+
+
 
 struct vec2
 {
@@ -50,8 +54,30 @@ struct switches
 	bool teleportToTargetEntity = false;
 	bool vehicleGodMode = false;
 	bool vehicleFix = false;
-	bool teleportToBullet = false;
+	bool teleportToSniperBullet = false;
 	bool airBreak = false;
+	bool godModeFlagsSet = false;
+};
+
+
+struct Flags
+{
+
+	uint8_t noGravityFlag = 2;
+	uint8_t noSpeedFlag = 32;
+	uint8_t freezeFlag = 2;
+	uint8_t gravityFlag = 18;
+	uint8_t gravityFlagCar = 2;
+	uint8_t speedFlag = 2;
+	uint8_t noGravityFlagCar = 0;
+	uint8_t noFreezeFlag = 0;
+	uint8_t playerFlag = 9;
+	uint8_t noPlayerFlag = 3;
+	uint8_t godModeFlag = 16;
+	uint8_t noGodModeFlag = 0;
+	uint8_t headImmunity = 4;
+	uint8_t noHeadImmunity = 0;
+
 };
 
 

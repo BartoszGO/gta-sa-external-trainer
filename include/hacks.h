@@ -11,17 +11,18 @@ private:
 	DWORD procId;
 	HANDLE hProc;
 	uintptr_t moduleBaseAddr;
-	uintptr_t playerBasePtr;
-	uintptr_t currentCarPtr;
-	uintptr_t playerAddr;
-	uintptr_t playerPosAddr;
-	uintptr_t healthAddr;
-	uintptr_t armorAddr;
+	uintptr_t playerPtrAddr;
+	uintptr_t currentCarPtrAddr;
+	uintptr_t playerPtr;
+	uintptr_t playerPosPtr;
+	uintptr_t healthPtr;
+	uintptr_t armorPtr;
 	offsets ofOffsets;
 	vec3 playerSavedPos;
 	vec3 targetEntityPos;
 	vec3 sniperBulletPos;
 	switches swSwitches;
+	Flags flags;
 	
 
 public:
@@ -37,13 +38,15 @@ public:
 	void AirBreak();
 	void AirBreakOff();
 	void TeleportToTargetEntity();
-	void TeleportToBulletLocation();
+	void TeleportToSniperBulletLocation();
 	uintptr_t CheckIfInVehicle();
+	void FreezeHealth();
 	void ChangeFloatValue(float value, uintptr_t addr);
 	void FreezeAmmo();
 	void UnfreezeAmmo();
-	void KillWithSigth();
-	void SetFlags(uintptr_t entity,bool setFlag, bool isCar);
+	void KillWithSight();
+	void SetFlagsForGodMode(uintptr_t entity, bool setFlag);
+	void SetFlagsForAirbreak(uintptr_t entity,bool setFlag, bool isCar);
 	void MakeCurrentVehicleGodMode(bool isEnabled);
 	void FixCurrentVehicle();
 	void VehicleSpeedBoost();
