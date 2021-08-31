@@ -1,6 +1,6 @@
 # gta-sa-external-trainer
 An external Grand Theft Auto:San Andreas trainer made with c++, using Windows.h library
-## What can i do with this trainer
+## What can I do with this trainer?
 There are plenty of functions that allow you to
 
 - Freeze and refill your health status, and also make you immune to bullets, melee, fall damage, fire, explosions.
