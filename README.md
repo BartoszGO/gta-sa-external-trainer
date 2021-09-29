@@ -17,5 +17,5 @@ There are plenty of functions that allow you to
 
 ## Whats in the future?
 
-In the future I'm planning to make custom key bindings, and I'm also planning to make another, bigger project,
+I'm planning to make another, bigger project,
 that's internal this time. 
