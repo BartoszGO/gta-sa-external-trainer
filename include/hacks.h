@@ -1,6 +1,7 @@
 #pragma once
 #include<Windows.h>
 #include"structs.h"
+#include"pointutilities.h"
 //#include"entityclass.h"
 
 
@@ -28,13 +29,13 @@ private:
 public:
 	HackClass();
 	~HackClass();
+	void Initialize();
 	void SavePlayerPosition();
 	void LoadPlayerSavedPosition();
 	void LoadPlayerPosition(vec3 pos);
 	void MovePlayerPosition(vec3 movement);
 	void SetPlayerPosition(vec3 pos);
 	vec3 GetEntityPosition(uintptr_t entity);
-	vec3 RotatePoint(float cx, float cy, float angle, vec3 p);
 	void AirBreak();
 	void AirBreakOff();
 	void TeleportToTargetEntity();

@@ -10,23 +10,70 @@
 #include<cmath>
 //#include<entityclass.h>
 #include"displayutilities.h"
+#include"pointutilities.h"
 
 HackClass::HackClass()
 {
 	processName = L"gta_sa.exe";
-	procId = GetProcessId(processName);
-	hProc = OpenProcess(PROCESS_ALL_ACCESS, 0, procId);
-	moduleBaseAddr = GetModuleBaseAddress(procId, processName);
-	playerPtrAddr = moduleBaseAddr + ofOffsets.playerOffset;
-	currentCarPtrAddr = moduleBaseAddr + ofOffsets.currentCarOffset;
-	playerPosPtr = FindDynamicAddr(hProc, playerPtrAddr, ofOffsets.positionOffsets);
-	healthPtr = FindDynamicAddr(hProc, playerPtrAddr, ofOffsets.healthOffsets);
-	armorPtr = FindDynamicAddr(hProc, playerPtrAddr, ofOffsets.armorOffsets);
-	ReadProcessMemory(hProc, LPCVOID(playerPtrAddr), &playerPtr, sizeof(playerPtr), 0);
+	Initialize();
 }
 
 HackClass::~HackClass()
 {
+	
+}
+
+void HackClass::Initialize()
+{
+	float temp;
+	procId = GetProcessId(processName);
+	while (!procId)
+	{
+		cls(false);
+		std::cout << "Can't find GTA San Andreas process, please open gta_sa.exe..." << std::endl;
+		std::cout << "-----------------------------------------------" << std::endl;
+		Sleep(5000);
+		procId = GetProcessId(processName);
+		
+	}
+
+	cls(true);
+
+	
+	hProc = OpenProcess(PROCESS_ALL_ACCESS, 0, procId);
+	while (!hProc)
+	{
+		cls(false);
+		std::cout << "Waiting for the process to open..." << std::endl;
+		std::cout << "-----------------------------------------------" << std::endl;
+		Sleep(20);
+		hProc = OpenProcess(PROCESS_ALL_ACCESS, 0, procId);
+	}
+
+	moduleBaseAddr = GetModuleBaseAddress(procId, processName);
+	playerPtrAddr = moduleBaseAddr + ofOffsets.playerOffset;
+	
+	ReadProcessMemory(hProc, LPCVOID(playerPtrAddr), &playerPtr, sizeof(playerPtr), 0);
+	
+	while (!playerPtr)
+	{
+		
+		cls(false);
+		std::cout << playerPtr << std::endl;
+		std::cout << "Waiting for the game to load..." << std::endl;
+		std::cout << "-----------------------------------------------" << std::endl;
+		ReadProcessMemory(hProc, LPCVOID(playerPtrAddr), &playerPtr, sizeof(playerPtr), 0);
+		Sleep(20);
+	}
+	
+	cls(true);
+
+	currentCarPtrAddr = moduleBaseAddr + ofOffsets.currentCarOffset;
+	playerPosPtr = FindDynamicAddr(hProc, playerPtrAddr, ofOffsets.positionOffsets);
+	healthPtr = FindDynamicAddr(hProc, playerPtrAddr, ofOffsets.healthOffsets);
+	armorPtr = FindDynamicAddr(hProc, playerPtrAddr, ofOffsets.armorOffsets);
+	
+	
 	
 }
 
@@ -119,24 +166,7 @@ void HackClass::MovePlayerPosition(vec3 movement)
 
 
 
-vec3 HackClass::RotatePoint(float cx, float cy, float angle, vec3 p)
-{
-	float s = sin(angle);
-	float c = cos(angle);
 
-	// translate point back to origin:
-	p.x -= cx;
-	p.y -= cy;
-
-	// rotate point
-	float xnew = p.x * c - p.y * s;
-	float ynew = p.x * s + p.y * c;
-
-	// translate point back:
-	p.x = xnew + cx;
-	p.y = ynew + cy;
-	return p;
-}
 
 
 void HackClass::SetFlagsForGodMode(uintptr_t entity, bool setFlag)
@@ -616,13 +646,11 @@ void HackClass::VehicleJump()
 
 void HackClass::MenuDisplay()
 {
-	cls();
+	cls(false);
 	std::string buffer;
 	buffer.reserve(1000);
 	std::cout << "GTA SA External trainer made by Chemik" << std::endl;
 	std::cout << "-----------------------------------------------" << std::endl;
-	if (hProc)
-	{
 		
 		addToBuffer(buffer, "[NUMPAD_1] Freeze Health               : ", swSwitches.freezeHealth,0);
 		addToBuffer(buffer, "[NUMPAD_2] Freeze Armor                : ", swSwitches.freezeArmor,0);
@@ -641,20 +669,7 @@ void HackClass::MenuDisplay()
 		addToBuffer(buffer, "[NUMPAD_0] Exit Trainer                  ", 0, 1);
 
 		
-		
-
-
-	}
-	else
-	{
-		std::cout << "Can't find GTA San Andreas process" << std::endl;
-	}
 	
-	std::cout << "-----------------------------------------------" << std::endl;
-	std::cout << "[NUMPAD_0] Exit Hack" << std::endl;
-	
-
-
 	std::cout << buffer << std::endl;
 	swSwitches.loadPos = false;
 	swSwitches.teleportToTargetEntity = false;
@@ -792,7 +807,7 @@ void HackClass::MainHackLoop() {
 		}
 		
 		MenuDisplay();
-		Sleep(20);
+		Sleep(2);
 
 	}
 }

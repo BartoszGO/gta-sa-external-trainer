@@ -1,4 +1,3 @@
-//credit for setCursorPosition and cls functions goes to Cameron on https://stackoverflow.com/questions/34842526/update-console-without-flickering-c
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -24,12 +23,12 @@ void addToBuffer(std::string& buffer,std::string text, bool sw, bool normalAppen
 void setCursorPosition(int x, int y)
 {
     static const HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-  //  std::cout.flush();
+    std::cout.flush();
     COORD coord = { (SHORT)x, (SHORT)y };
     SetConsoleCursorPosition(hOut, coord);
 }
 
-void cls()
+void cls(bool clearAll)
 {
     // Get the Win32 handle representing standard output.
     // This generally only has to be done once, so we make it static.
@@ -42,7 +41,7 @@ void cls()
     // We need to flush that to the console because we're circumventing
     // std::cout entirely; after we clear the console, we don't want
     // stale buffered text to randomly be written out.
-   // std::cout.flush();
+     std::cout.flush();
 
     // Figure out the current width and height of the console window
     if (!GetConsoleScreenBufferInfo(hOut, &csbi)) {
@@ -54,11 +53,12 @@ void cls()
     DWORD written;
 
     // Flood-fill the console with spaces to clear it
-    //FillConsoleOutputCharacter(hOut, TEXT(' '), length, topLeft, &written);
+
+    if(clearAll) FillConsoleOutputCharacter(hOut, TEXT(' '), length, topLeft, &written);
 
     // Reset the attributes of every character to the default.
     // This clears all background colour formatting, if any.
-    //FillConsoleOutputAttribute(hOut, csbi.wAttributes, length, topLeft, &written);
+    FillConsoleOutputAttribute(hOut, csbi.wAttributes, length, topLeft, &written);
 
     // Move the cursor back to the top left for the next sequence of writes
     SetConsoleCursorPosition(hOut, topLeft);
